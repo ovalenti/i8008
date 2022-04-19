@@ -12,6 +12,38 @@
 #include <stdlib.h>
 #include <string.h>
 
+static char* tokenize(char* str)
+{
+    static char* start = NULL;
+    int escaped        = 0;
+
+    if (str == NULL)
+        str = start;
+    else
+        start = str;
+
+    if (str == NULL)
+        return NULL;
+
+    while (*str && isblank(*str))
+        str++;
+
+    start = str;
+
+    while (*start && (escaped || !isblank(*start))) {
+        if (*start == '\'')
+            escaped = !escaped;
+        start++;
+    }
+
+    if (*start)
+        *(start++) = '\0';
+    else
+        start = NULL;
+
+    return *str ? str : NULL;
+}
+
 static void append_byte(struct asm_ctx* ctx, uint8_t v)
 {
     if (ctx->output_alloc <= ctx->pc) {
@@ -19,17 +51,6 @@ static void append_byte(struct asm_ctx* ctx, uint8_t v)
         ctx->output       = (uint8_t*)realloc(ctx->output, ctx->output_alloc);
     }
     ctx->output[ctx->pc++] = v;
-}
-
-static void trim(char** str)
-{
-    char* end;
-    while (isblank(**str))
-        (*str)++;
-
-    end = (*str) + strlen(*str) - 1;
-    while (end > *str && isblank(*end))
-        *(end--) = '\0';
 }
 
 static void declare_symbol(struct asm_ctx* ctx, const char* sym_name)
@@ -118,7 +139,7 @@ static void parse_label(struct asm_ctx* ctx, char** line)
     if (colon) {
         char* label = *line;
         *colon      = '\0';
-        trim(&label);
+        label       = tokenize(label); // trim
         declare_symbol(ctx, label);
         *line = colon + 1;
     }
@@ -395,15 +416,14 @@ void asm_ble(struct asm_ctx* ctx, int (*nextc)(void*), void* arg)
         buffer[line_len] = '\0';
 
         parse_label(ctx, &ptr);
-        trim(&ptr);
 
-        ptr = strtok(ptr, "\t ");
+        ptr = tokenize(ptr);
         if (!ptr)
             continue;
         if (parse_instr(ctx, ptr))
             return;
 
-        while ((ptr = strtok(NULL, "\t "))) {
+        while ((ptr = tokenize(NULL))) {
             if (parse_param(ctx, ptr))
                 return;
         }
