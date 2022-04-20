@@ -198,32 +198,63 @@ static uint8_t io_func(struct i8008_cpu* cpu, enum i8008_state state, uint8_t bu
     return 0;
 }
 
+static void usage(const char* prg_name)
+{
+    printf("%s [<rom>]\n"
+           "\t<rom>\tload file as rom content\n",
+           prg_name);
+}
+
+static int load_rom_content(const char* rom_file)
+{
+    int fd;
+    int copied = 0;
+    ssize_t rc;
+
+    fd = open(rom_file, O_RDONLY);
+    if (fd < 0) {
+        perror("open");
+        exit(1);
+    }
+    while ((rc = read(fd, rom + copied, sizeof(rom) - copied)) > 0) {
+        copied += rc;
+    }
+    if (rc < 0) {
+        perror("read");
+        return 1;
+    }
+    close(fd);
+
+    return 0;
+}
+
+static void setup(int argc, char** argv)
+{
+    int rc;
+
+    while ((rc = getopt(argc, argv, "h")) != -1) {
+        switch (rc) {
+        case 'h':
+            usage(argv[0]);
+            exit(0);
+        default:
+            usage(argv[0]);
+            exit(1);
+        }
+    }
+    if (optind < argc) {
+        if (load_rom_content(argv[optind]))
+            exit(1);
+    }
+
+    fcntl(0, F_SETFL, fcntl(0, F_GETFL, 0) | O_NONBLOCK);
+}
+
 int main(int argc, char** argv)
 {
     struct platform platform = { .io_in_char = -1, 0 };
 
-    if (argc == 2) {
-        const char* rom_file = argv[1];
-        int fd;
-        int copied = 0;
-        ssize_t rc;
-
-        fd = open(rom_file, O_RDONLY);
-        if (fd < 0) {
-            perror("open");
-            exit(1);
-        }
-        while ((rc = read(fd, rom + copied, sizeof(rom) - copied)) > 0) {
-            copied += rc;
-        }
-        if (rc < 0) {
-            perror("read");
-            exit(1);
-        }
-        close(fd);
-    }
-
-    fcntl(0, F_SETFL, fcntl(0, F_GETFL, 0) | O_NONBLOCK);
+    setup(argc, argv);
 
     platform.mem_read  = &mem_read;
     platform.mem_write = &mem_write;
