@@ -16,10 +16,10 @@
 #define FIELD(value, left, right) (((value) >> (right)) & ((1 << ((left) + 1 - (right))) - 1))
 
 enum i8008_flags {
-    I8008_F_CARRY  = 0,
-    I8008_F_ZERO   = 1,
-    I8008_F_SIGN   = 2,
-    I8008_F_PARITY = 3,
+    I8008_F_CARRY  = 1 << 0,
+    I8008_F_ZERO   = 1 << 1,
+    I8008_F_SIGN   = 1 << 2,
+    I8008_F_PARITY = 1 << 3,
 };
 
 enum i8008_ual_op {
@@ -74,8 +74,7 @@ static int parity(uint8_t v)
 static void update_flags(struct i8008_cpu* cpu, uint8_t v)
 {
     cpu->flags &= I8008_F_CARRY;
-    cpu->flags |=
-        !v ? (1 << I8008_F_ZERO) : 0 | (v & 0x80) ? (1 << I8008_F_SIGN) : 0 | parity(v) ? (1 << I8008_F_PARITY) : 0;
+    cpu->flags |= !v ? I8008_F_ZERO : 0 | (v & 0x80) ? I8008_F_SIGN : 0 | parity(v) ? I8008_F_PARITY : 0;
 }
 
 static void update_carry(struct i8008_cpu* cpu, int c)
