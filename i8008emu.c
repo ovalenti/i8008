@@ -69,7 +69,7 @@ static void io_console_poll(struct platform* platform)
         char c;
         ssize_t rc = read(0, &c, 1);
         if (rc == 1)
-            platform->io_in_char = rc;
+            platform->io_in_char = c;
     }
 
     if (platform->io_in_char != -1 && platform->int_enabled)
