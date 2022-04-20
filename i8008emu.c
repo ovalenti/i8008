@@ -13,9 +13,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "disasm.h"
 #include "i8008.h"
 
 #define container_of(ptr, type, member) (type*)((char*)(ptr)-offsetof(type, member))
+
+static int trace = 0;
 
 static uint8_t rom[2048];
 static uint8_t ram[2048];
@@ -198,9 +201,33 @@ static uint8_t io_func(struct i8008_cpu* cpu, enum i8008_state state, uint8_t bu
     return 0;
 }
 
+static void print_debug_info(struct platform* platform)
+{
+    uint16_t pc = platform->cpu.stack[platform->cpu.stack_idx];
+    uint8_t op  = mem_read(pc);
+    char disasm[16];
+
+    switch (i8008_opcodes[op].size) {
+    case 2:
+        snprintf(disasm, sizeof(disasm), "%s 0x%02X", i8008_opcodes[op].mnemonic, (unsigned int)mem_read(pc + 1));
+        break;
+    case 3:
+        snprintf(disasm, sizeof(disasm), "%s 0x%04X", i8008_opcodes[op].mnemonic,
+                 (((unsigned int)mem_read(pc + 2)) << 8) + mem_read(pc + 1));
+        break;
+    default:
+        snprintf(disasm, sizeof(disasm), "%s", i8008_opcodes[op].mnemonic);
+        break;
+    }
+
+    fprintf(stderr, "PC=%02x op=%02x A=%02x H=%02x L=%02x   %s\n", pc, op, platform->cpu.regs[REG_A],
+            platform->cpu.regs[REG_H], platform->cpu.regs[REG_L], disasm);
+}
+
 static void usage(const char* prg_name)
 {
-    printf("%s [<rom>]\n"
+    printf("%s [-t] [<rom>]\n"
+           "\t-t\ttrace instructions (stderr)\n"
            "\t<rom>\tload file as rom content\n",
            prg_name);
 }
@@ -232,8 +259,11 @@ static void setup(int argc, char** argv)
 {
     int rc;
 
-    while ((rc = getopt(argc, argv, "h")) != -1) {
+    while ((rc = getopt(argc, argv, "th")) != -1) {
         switch (rc) {
+        case 't':
+            trace = 1;
+            break;
         case 'h':
             usage(argv[0]);
             exit(0);
@@ -262,9 +292,9 @@ int main(int argc, char** argv)
     i8008_init(&platform.cpu, &io_func);
 
     while (1) {
-        //        printf("PC=%02x op=%02x A=%02x H=%02x L=%02x\n", platform.cpu.stack[platform.cpu.stack_idx],
-        //               mem_read(platform.cpu.stack[platform.cpu.stack_idx]), platform.cpu.regs[REG_A],
-        //               platform.cpu.regs[REG_H], platform.cpu.regs[REG_L]);
+        if (trace)
+            print_debug_info(&platform);
+
         i8008_cycle(&platform.cpu);
     }
 
