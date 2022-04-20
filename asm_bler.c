@@ -384,7 +384,8 @@ static int parse_param(struct asm_ctx* ctx, char* param)
     }
 
     if (*param == '\'') {
-        append_byte(ctx, param[1]);
+        for (param++; *param && *param != '\''; param++)
+            append_byte(ctx, *param);
     } else if (isdigit(*param)) {
         uint8_t v = strtoul(param, NULL, 0);
         append_byte(ctx, v);
