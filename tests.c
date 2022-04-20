@@ -90,12 +90,26 @@ static void test_lam()
     asm_free(&ctx);
 }
 
+static void test_set()
+{
+    struct asm_ctx ctx     = { 0 };
+    struct feed_ctx feeder = { .str = ".set ' '", 0 };
+
+    asm_ble(&ctx, &feed, &feeder);
+
+    ASSERT(ctx.pc == 0x1);
+    ASSERT(ctx.output[0] == ' ');
+
+    asm_free(&ctx);
+}
+
 int main()
 {
     test_lai();
     test_jmp();
     test_ret();
     test_lam();
+    test_set();
 
     fprintf(stdout, "Passed\n");
     return 0;
