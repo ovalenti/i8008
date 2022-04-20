@@ -284,6 +284,11 @@ static int parse_instr(struct asm_ctx* ctx, char* instr)
         return 0;
     }
 
+    if (0 == strncmp(instr, "RETI", 4)) {
+        append_byte(ctx, 0x1F);
+        return 0;
+    }
+
     // disambiguate CP, CA, CF and CT
     if (0 == strncmp(instr, "CP", 2))
         instr[0] = '_';

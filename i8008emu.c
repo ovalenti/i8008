@@ -143,9 +143,17 @@ static uint8_t io_func(struct i8008_cpu* cpu, enum i8008_state state, uint8_t bu
         uint16_t addr = platform->addr_high;
         addr          = (addr << 8) | platform->addr_low;
         switch (platform->ctrl) {
-        case I8008_T2_CTRL_PCI:
+        case I8008_T2_CTRL_PCI: {
+            uint8_t instr;
             if (platform->stuffed_instructions_number)
                 return platform->stuffed_instructions[--platform->stuffed_instructions_number];
+
+            instr = platform->mem_read(addr);
+            if (instr == 0x1f) // RETI
+                platform->int_enabled = 1;
+
+            return instr;
+        }
         case I8008_T2_CTRL_PCR:
             return platform->mem_read(addr);
         case I8008_T2_CTRL_PCC: {
